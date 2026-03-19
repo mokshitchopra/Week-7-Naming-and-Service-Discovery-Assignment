@@ -1,0 +1,64 @@
+services:
+  # --- Service Registry ---
+  # Central registry where all service instances register themselves.
+  # Clients query this to discover available instances.
+  registry:
+    build: ./registry
+    container_name: registry
+    ports:
+      - "8500:8500"
+    networks:
+      - app-net
+
+  # --- Service A - Instance 1 ---
+  # First instance of the service, runs on port 5001.
+  # Registers itself with the registry on startup.
+  service-a-1:
+    build: ./service
+    container_name: service-a-1
+    environment:
+      - PORT=5001
+      - HOST_IP=service-a-1
+      - REGISTRY_URL=http://registry:8500
+    ports:
+      - "5001:5001"
+    depends_on:
+      - registry
+    networks:
+      - app-net
+
+  # --- Service A - Instance 2 ---
+  # Second instance of the service, runs on port 5002.
+  # Registers itself with the registry on startup.
+  service-a-2:
+    build: ./service
+    container_name: service-a-2
+    environment:
+      - PORT=5002
+      - HOST_IP=service-a-2
+      - REGISTRY_URL=http://registry:8500
+    ports:
+      - "5002:5002"
+    depends_on:
+      - registry
+    networks:
+      - app-net
+
+  # --- Client ---
+  # Discovers service instances from the registry and calls them randomly.
+  client:
+    build: ./client
+    container_name: client
+    environment:
+      - REGISTRY_URL=http://registry:8500
+      - SERVICE_NAME=service-a
+    depends_on:
+      - service-a-1
+      - service-a-2
+    networks:
+      - app-net
+
+# Shared bridge network for all containers
+networks:
+  app-net:
+    driver: bridge
