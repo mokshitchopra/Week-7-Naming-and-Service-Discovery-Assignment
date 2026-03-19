@@ -9,13 +9,13 @@ This project demonstrates **service discovery** in a microservice architecture u
 ## Architecture
 
 ```mermaid
-graph TD
-    S1[Service A - Instance 1 :5001] -->|POST /register| R[Service Registry :8500]
-    S2[Service A - Instance 2 :5002] -->|POST /register| R
-    C[Client] -->|GET /discover/service-a| R
-    R -->|returns list of instances| C
-    C -->|random.choice - GET /hello| S1
-    C -->|random.choice - GET /hello| S2
+graph LR
+    S1[Instance 1 :5001] -->|POST /register| R[Service Registry :8500]
+    S2[Instance 2 :5002] -->|POST /register| R
+    R -->|instance list| C[Client]
+    C -->|GET /discover| R
+    C -->|GET /hello| S1
+    C -->|GET /hello| S2
 ```
 
 ### Component Descriptions
