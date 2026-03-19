@@ -1,10 +1,12 @@
 """
 Service Instance - A Flask microservice that registers itself with the
-Service Registry on startup and exposes /hello and /health endpoints.
+Service Registry on startup and sends periodic heartbeats to stay alive.
+Exposes /hello and /health endpoints.
 """
 
 import os
 import time
+import threading
 import requests
 from flask import Flask, jsonify
 
@@ -58,6 +60,27 @@ def register_with_registry():
     return False
 
 
+def heartbeat():
+    """
+    Background thread that re-registers with the registry every 10 seconds.
+    This acts as a heartbeat — the registry uses TTL-based eviction, so if
+    this service stops sending heartbeats, it will be removed from the
+    registry within 30 seconds.
+    """
+    payload = {
+        "name": "service-a",
+        "host": HOST_IP,
+        "port": PORT
+    }
+    while True:
+        time.sleep(10)
+        try:
+            requests.post(f"{REGISTRY_URL}/register", json=payload, timeout=2)
+        except Exception:
+            # Silently ignore heartbeat failures — the service keeps running
+            pass
+
+
 @app.route("/hello", methods=["GET"])
 def hello():
     """
@@ -82,10 +105,14 @@ def health():
     return jsonify({"status": "ok"}), 200
 
 
-# Entry point: register with the registry, then start the Flask server
+# Entry point: register with the registry, start heartbeat, then start Flask
 if __name__ == "__main__":
     # Register this instance before accepting requests
     register_with_registry()
+
+    # Start the heartbeat thread as a daemon (re-registers every 10s)
+    threading.Thread(target=heartbeat, daemon=True).start()
+    print(f"[SERVICE] Heartbeat thread started (every 10s)")
 
     # Start the Flask server on the configured port, accessible from all interfaces
     print(f"[SERVICE] Starting service instance on {HOST_IP}:{PORT}")

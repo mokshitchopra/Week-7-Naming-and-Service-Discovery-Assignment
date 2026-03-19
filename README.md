@@ -102,10 +102,10 @@ docker compose stop service-a-2
 
 ### 4. Observe behavior
 
-- The client still discovers **both** instances from the registry (because the registry has no health-check eviction).
-- When the client tries to call the stopped instance, it will get a connection error.
-- When it picks the live instance, it succeeds normally.
-- This demonstrates partial fault tolerance — the client continues operating with the remaining instance.
+- Each service instance sends a **heartbeat** (re-registers) every **10 seconds**.
+- The registry evicts any instance that hasn't sent a heartbeat within **30 seconds (TTL)**.
+- Within ~30 seconds of stopping `service-a-2`, the registry automatically removes it.
+- The client then discovers only **1 instance** and all requests succeed — **zero errors**.
 
 ### 5. Bring it back
 
